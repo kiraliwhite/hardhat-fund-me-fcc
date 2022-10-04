@@ -1,30 +1,33 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.7;
+pragma solidity ^0.8.0;
 
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 library PriceConverter {
-  function getPrice(AggregatorV3Interface priceFeed)
-    internal
-    view
-    returns (uint256)
-  {
-    (, int256 answer, , , ) = priceFeed.latestRoundData();
-    // ETH/USD rate in 18 digit
-    return uint256(answer * 10000000000);
-  }
+    //在function多加一個傳入參數AggregatorV3Interface priceFeed
+    function getPrice(AggregatorV3Interface priceFeed)
+        internal
+        view
+        returns (uint)
+    {
+        //註解原有寫死的智能合約地址
+        // AggregatorV3Interface priceFeed = AggregatorV3Interface(
+        //     0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e
+        // );
+        //透過AggregatorV3Interface priceFeed直接取用其ABI latestRoundData 得到ethPrice的餵價
+        (, int256 ethPrice, , , ) = priceFeed.latestRoundData();
+        return uint(ethPrice * 1e10);
+    }
 
-  // 1000000000
-  // call it get fiatConversionRate, since it assumes something about decimals
-  // It wouldn't work for every aggregator
-  function getConversionRate(uint256 ethAmount, AggregatorV3Interface priceFeed)
-    internal
-    view
-    returns (uint256)
-  {
-    uint256 ethPrice = getPrice(priceFeed);
-    uint256 ethAmountInUsd = (ethPrice * ethAmount) / 1000000000000000000;
-    // the actual ETH/USD conversation rate, after adjusting the extra 0s.
-    return ethAmountInUsd;
-  }
+    //在這個function多加上第二個輸入變數AggregatorV3Interface priceFeed,用來承接fundme.sol合約傳送過來的priceFeed全域變數
+    function getConversionRate(uint _ethAmount, AggregatorV3Interface priceFeed)
+        internal
+        view
+        returns (uint)
+    {
+        //呼叫getPrice function時傳遞priceFeed變數進去
+        uint ethPrice = getPrice(priceFeed);
+        uint totalUSD = (ethPrice * _ethAmount) / 1e18;
+        return totalUSD;
+    }
 }
