@@ -1,122 +1,93 @@
 // SPDX-License-Identifier: MIT
-// 1. Pragma
-pragma solidity ^0.8.7;
-// 2. Imports
+pragma solidity ^0.8.0;
+
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "./PriceConverter.sol";
 
-// 3. Interfaces, Libraries, Contracts
-error FundMe__NotOwner();
+error failed();
 
-/**@title A sample Funding Contract
- * @author Patrick Collins
- * @notice This contract is for creating a sample funding contract
- * @dev This implements price feeds as our library
- */
 contract FundMe {
-    // Type Declarations
-    using PriceConverter for uint256;
+    address public immutable i_owner;
+    //宣告一個全域變數,priceFeed,其類別是AggregatorV3Interface
+    AggregatorV3Interface public priceFeed;
 
-    // State variables
-    uint256 public constant MINIMUM_USD = 50 * 10**18;
-    address private immutable i_owner;
-    address[] private s_funders;
-    mapping(address => uint256) private s_addressToAmountFunded;
-    AggregatorV3Interface private s_priceFeed;
+    //傳遞一個address變數給constructor
+    constructor(address priceFeedAddress) {
+        i_owner = msg.sender;
+        //將全域變數設定為interface(智能合約地址)
+        priceFeed = AggregatorV3Interface(priceFeedAddress);
+    }
 
-    // Events (we have none!)
-
-    // Modifiers
     modifier onlyOwner() {
-        // require(msg.sender == i_owner);
-        if (msg.sender != i_owner) revert FundMe__NotOwner();
+        require(msg.sender == i_owner);
         _;
     }
+    using PriceConverter for uint256;
+    uint public constant MINIUSD = 10 * 1e18;
+    address[] public funders;
+    mapping(address => uint) public fundMoney;
 
-    // Functions Order:
-    //// constructor
-    //// receive
-    //// fallback
-    //// external
-    //// public
-    //// internal
-    //// private
-    //// view / pure
-
-    constructor(address priceFeed) {
-        s_priceFeed = AggregatorV3Interface(priceFeed);
-        i_owner = msg.sender;
+    function fund() public payable {
+        //在msg.value呼叫library的function getConversionRate時,額外再傳遞一個全域變數priceFeed
+        require(msg.value.getConversionRate(priceFeed) > MINIUSD);
+        funders.push(msg.sender);
+        fundMoney[msg.sender] += msg.value;
     }
 
-    /// @notice Funds our contract based on the ETH/USD price
-    function fund() public payable {
-        require(
-            msg.value.getConversionRate(s_priceFeed) >= MINIMUM_USD,
-            "You need to spend more ETH!"
+    function getPrice() public view returns (uint) {
+        AggregatorV3Interface temp1 = AggregatorV3Interface(
+            0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e
         );
-        // require(PriceConverter.getConversionRate(msg.value) >= MINIMUM_USD, "You need to spend more ETH!");
-        s_addressToAmountFunded[msg.sender] += msg.value;
-        s_funders.push(msg.sender);
+        (, int256 ethPrice, , , ) = temp1.latestRoundData();
+        return uint(ethPrice / 1e8);
     }
 
     function withdraw() public onlyOwner {
-        for (
-            uint256 funderIndex = 0;
-            funderIndex < s_funders.length;
-            funderIndex++
-        ) {
-            address funder = s_funders[funderIndex];
-            s_addressToAmountFunded[funder] = 0;
+        for (uint i = 0; i < funders.length; i++) {
+            address tempAccount = funders[i];
+            fundMoney[tempAccount] = 0;
         }
-        s_funders = new address[](0);
-        // Transfer vs call vs Send
-        // payable(msg.sender).transfer(address(this).balance);
-        (bool success, ) = i_owner.call{value: address(this).balance}("");
-        require(success);
+        funders = new address[](0);
+        (bool call, ) = payable(msg.sender).call{value: address(this).balance}(
+            ""
+        );
+        if (call != true) {
+            revert failed();
+        }
     }
 
-    function cheaperWithdraw() public onlyOwner {
-        address[] memory funders = s_funders;
-        // mappings can't be in memory, sorry!
-        for (
-            uint256 funderIndex = 0;
-            funderIndex < funders.length;
-            funderIndex++
-        ) {
-            address funder = funders[funderIndex];
-            s_addressToAmountFunded[funder] = 0;
-        }
-        s_funders = new address[](0);
-        // payable(msg.sender).transfer(address(this).balance);
-        (bool success, ) = i_owner.call{value: address(this).balance}("");
-        require(success);
+    receive() external payable {
+        fund();
     }
 
-    /** @notice Gets the amount that an address has funded
-     *  @param fundingAddress the address of the funder
-     *  @return the amount funded
-     */
-    function getAddressToAmountFunded(address fundingAddress)
+    fallback() external payable {
+        fund();
+    }
+
+    function traFromContract(address payable _to, uint _value)
         public
-        view
-        returns (uint256)
+        onlyOwner
     {
-        return s_addressToAmountFunded[fundingAddress];
+        _to.transfer(_value);
     }
 
-    function getVersion() public view returns (uint256) {
-        return s_priceFeed.version();
+    function sendFromContract(address payable _to, uint _value)
+        public
+        onlyOwner
+    {
+        bool sent = _to.send(_value);
+        if (sent != true) {
+            revert failed();
+        }
     }
 
-    function getFunder(uint256 index) public view returns (address) {
-        return s_funders[index];
-    }
-
-    function getOwner() public view returns (address) {
-        return i_owner;
-    }
-
-    function getPriceFeed() public view returns (AggregatorV3Interface) {
-        return s_priceFeed;
+    function callFromContract(address payable _to, uint _value)
+        public
+        onlyOwner
+    {
+        (bool call, ) = _to.call{value: _value}("");
+        if (call != true) {
+            revert failed();
+        }
     }
 }
