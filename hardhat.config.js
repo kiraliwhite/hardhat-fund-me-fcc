@@ -1,65 +1,62 @@
-require("@nomiclabs/hardhat-waffle")
-require("hardhat-gas-reporter")
-require("@nomiclabs/hardhat-etherscan")
-require("dotenv").config()
-require("solidity-coverage")
-require("hardhat-deploy")
-// You need to export an object to set up your config
-// Go to https://hardhat.org/config/ to learn more
-/**
- * @type import('hardhat/config').HardhatUserConfig
- */
+require("hardhat-deploy");
+//const { task } = require("hardhat/config");
+require("@nomicfoundation/hardhat-toolbox");
+require("dotenv").config();
+require("@nomiclabs/hardhat-etherscan");
+//require("./tasks/block-number");
+require("hardhat-gas-reporter");
+require("solidity-coverage");
+//require("@nomiclabs/hardhat-waffle");
 
-const COINMARKETCAP_API_KEY = process.env.COINMARKETCAP_API_KEY || ""
-const GOERLI_RPC_URL =
-    process.env.GOERLI_RPC_URL ||
-    "https://eth-mainnet.alchemyapi.io/v2/your-api-key"
-const PRIVATE_KEY =
-    process.env.PRIVATE_KEY ||
-    "0x11ee3108a03081fe260ecdc106554d09d9d1209bcafd46942b10e02943effc4a"
-const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY || ""
+const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL;
+const PRIVATE_KEY = process.env.PRIVATE_KEY;
+const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
+//const COINMARKETCAP_API_KEY = process.env.COINMARKETCAP_API_KEY;
 
+/** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
-    defaultNetwork: "hardhat",
-    networks: {
-        hardhat: {
-            chainId: 31337,
-            // gasPrice: 130000000000,
-        },
-        goerli: {
-            url: GOERLI_RPC_URL,
-            accounts: [PRIVATE_KEY],
-            chainId: 5,
-            blockConfirmations: 6,
-        },
+  defaultNetwork: "hardhat",
+  networks: {
+    goerli: {
+      url: GOERLI_RPC_URL,
+      accounts: [PRIVATE_KEY],
+      chainId: 5,
+      blockConfirmations: 6, //等待六個區塊時間
     },
-    solidity: {
-        compilers: [
-            {
-                version: "0.8.7",
-            },
-            {
-                version: "0.6.6",
-            },
-        ],
+    hardhat: {
+      //url: "http://127.0.0.1:8545/",
+      //account: no need
+      chainId: 31337,
     },
-    etherscan: {
-        apiKey: ETHERSCAN_API_KEY,
+  },
+  //solidity: "0.8.7",
+  solidity: {
+    compilers: [{ version: "0.8.8" }, { version: "0.6.6" }],
+  },
+  etherscan: {
+    apiKey: ETHERSCAN_API_KEY,
+  },
+  gasReporter: {
+    enabled: false,
+    //輸出成為一個檔案
+    //outputFile: "gas-reporter.txt",
+    //不需要顏色,因為txt檔顏色沒有意義
+    noColors: true,
+    //Gas花費用美元來顯示
+    currency: "USD",
+    //使用coinMarket Cap的API KEY 來取得以太坊兌美元的報價
+    //coinmarketcap: COINMARKETCAP_API_KEY,
+    gasPriceApi:
+      "https://api.etherscan.io/api?module=proxy&action=eth_gasPrice",
+  },
+  namedAccounts: {
+    deployer: {
+      // default的欄位 代表這個帳號編號,通常0為deployer
+      default: 0,
+      // chain ID = 1 也就是網路在以太坊主網時的帳號
+      1: 0,
+      // 在goerli時的PRIVATE KEY是這個
+      // 5: '0xabcdefg1234567',
     },
-    gasReporter: {
-        enabled: true,
-        currency: "USD",
-        outputFile: "gas-report.txt",
-        noColors: true,
-        // coinmarketcap: COINMARKETCAP_API_KEY,
-    },
-    namedAccounts: {
-        deployer: {
-            default: 0, // here this will by default take the first account as deployer
-            1: 0, // similarly on mainnet it will take the first account as deployer. Note though that depending on how hardhat network are configured, the account 0 on one network can be different than on another
-        },
-    },
-    mocha: {
-        timeout: 500000,
-    },
-}
+  },
+};
