@@ -51,12 +51,10 @@ module.exports = {
   },
   namedAccounts: {
     deployer: {
-      // default的欄位 代表這個帳號編號,通常0為deployer
+      // default的欄位 這裡默認將第一個帳戶作為部署者
       default: 0,
-      // chain ID = 1 也就是網路在以太坊主網時的帳號
+      // chain ID = 1 也就是網路在以太坊主網時，它將第一個帳戶作為部署者。 請注意，根據 hardhat 網絡的配置方式，一個網絡上的帳戶 0 可能與另一個網絡上的不同
       1: 0,
-      // 在goerli時的PRIVATE KEY是這個
-      // 5: '0xabcdefg1234567',
     },
   },
 };
