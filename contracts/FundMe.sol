@@ -7,6 +7,7 @@ import "./PriceConverter.sol";
 error failed();
 
 contract FundMe {
+    using PriceConverter for uint256;
     address public immutable i_owner;
     //宣告一個全域變數,priceFeed,其類別是AggregatorV3Interface
     AggregatorV3Interface public priceFeed;
@@ -22,7 +23,7 @@ contract FundMe {
         require(msg.sender == i_owner);
         _;
     }
-    using PriceConverter for uint256;
+
     uint public constant MINIUSD = 10 * 1e18;
     address[] public funders;
     mapping(address => uint) public fundMoney;
@@ -32,14 +33,6 @@ contract FundMe {
         require(msg.value.getConversionRate(priceFeed) > MINIUSD);
         funders.push(msg.sender);
         fundMoney[msg.sender] += msg.value;
-    }
-
-    function getPrice() public view returns (uint) {
-        AggregatorV3Interface temp1 = AggregatorV3Interface(
-            0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e
-        );
-        (, int256 ethPrice, , , ) = temp1.latestRoundData();
-        return uint(ethPrice / 1e8);
     }
 
     function withdraw() public onlyOwner {
